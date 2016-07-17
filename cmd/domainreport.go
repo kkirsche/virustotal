@@ -26,9 +26,12 @@ import (
 )
 
 var (
-	domain      string
+	domains []string
+
 	outputJSON  bool
 	ouptutHuman bool
+
+	grepable bool
 )
 
 // DetectedURL is a sub-struct of DomainReportResult
@@ -78,13 +81,14 @@ type WebOfTrustInfo struct {
 // DomainReportResult is the result that is received after requesting a
 // domain report from VirusTotal's public API.
 type DomainReportResult struct {
-	AlexaDomainInfo              string                     `json:"Alexa domain info"`
-	BitDefenderCategory          string                     `json:"BitDefender category"`
-	TrendMicroCategory           string                     `json:"TrendMicro category"`
-	WOTDomainInfo                WebOfTrustInfo             `json:"WOT domain info"`
-	WebsenseThreatSeekerCategory string                     `json:"Websense ThreatSeeker category"`
-	WebutationDomainInfo         WebutationInfo             `json:"Webutation domain info"`
-	Categories                   []string                   `json:"categories"`
+	AlexaDomainInfo              string         `json:"Alexa domain info"`
+	BitDefenderCategory          string         `json:"BitDefender category"`
+	TrendMicroCategory           string         `json:"TrendMicro category"`
+	WOTDomainInfo                WebOfTrustInfo `json:"WOT domain info"`
+	WebsenseThreatSeekerCategory string         `json:"Websense ThreatSeeker category"`
+	WebutationDomainInfo         WebutationInfo `json:"Webutation domain info"`
+	Categories                   []string       `json:"categories"`
+	JSON                         string
 	DetectedURLs                 []DetectedURL              `json:"detected_urls"`
 	DomainSiblings               []string                   `json:"domain_siblings"`
 	Resolutions                  []Resolution               `json:"resolutions"`
@@ -97,68 +101,41 @@ type DomainReportResult struct {
 	WhoisTimestamp               float64                    `json:"whois_timestamp"`
 }
 
-// domainReportCmd represents the scanurl command
-var domainReportCmd = &cobra.Command{
-	Use:   "domainreport",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+// domainCmd represents the scanurl command
+var domainCmd = &cobra.Command{
+	Use:   "domain",
+	Short: "Retrieve informaiton about a domain",
+	Long: `Retrieve all information a domain in human readable or JSON format.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Example:
+
+virustotal domain -a {{ api_key }} -d {{ domain(s) }}
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		vtURL := "https://www.virustotal.com/vtapi/v2/domain/report"
+		responses := retrieveDomainInformation()
 
-		client := &http.Client{}
+		for _, resp := range responses {
+			if outputJSON {
+				fmt.Println(resp.JSON)
+			}
 
-		req, err := http.NewRequest("GET", vtURL, nil)
-		if err != nil {
-			logrus.WithError(err).Errorln("Failed to generate new request.")
-		}
-
-		q := req.URL.Query()
-		q.Add("apikey", apiKey)
-		q.Add("domain", domain)
-		req.URL.RawQuery = q.Encode()
-
-		resp, err := client.Do(req)
-		if err != nil {
-			logrus.WithError(err).Fatal("Received error while retrieving report.")
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logrus.WithError(err).Fatal("Received error while reading response body.")
-		}
-
-		var respStruct DomainReportResult
-		err = json.Unmarshal(body, &respStruct)
-		if err != nil {
-			logrus.WithError(err).Errorln("Failed to parse VirusTotal response")
-		}
-
-		if outputJSON {
-			fmt.Println(string(body))
-		}
-
-		if ouptutHuman || outputJSON == false {
-			printString("Alexa Domain Info", respStruct.AlexaDomainInfo)
-			printString("BitDefender Category", respStruct.BitDefenderCategory)
-			printStringSlice("Categories", respStruct.Categories)
-			printDetectedURLs("Detected URLs", respStruct.DetectedURLs)
-			printStringSlice("Domain Siblings", respStruct.DomainSiblings)
-			printResolutions("Resolutions", respStruct.Resolutions)
-			printResponseCode("Response Code", respStruct.ResponseCode)
-			printStringSlice("Subdomains", respStruct.Subdomains)
-			printString("TrendMicro Category", respStruct.TrendMicroCategory)
-			printDownloadSamples("Undetected Download Samples", respStruct.UndetectedDownloadedSamples)
-			printReferrerSamples("Undetected Referrer Samples", respStruct.UndetectedReferrerSamples)
-			printString("Verbose Message", respStruct.VerboseMsg)
-			printWOT("Web of Trust Domain Information", respStruct.WOTDomainInfo)
-			printString("Websense ThreatSeeker Category", respStruct.WebsenseThreatSeekerCategory)
-			printStringSlice("Whois", strings.Split(respStruct.Whois, "\n"))
+			if ouptutHuman || outputJSON == false {
+				printString("Alexa Domain Info", resp.AlexaDomainInfo)
+				printString("BitDefender Category", resp.BitDefenderCategory)
+				printStringSlice("Categories", resp.Categories)
+				printDetectedURLs("Detected URLs", resp.DetectedURLs)
+				printStringSlice("Domain Siblings", resp.DomainSiblings)
+				printResolutions("Resolutions", resp.Resolutions)
+				printResponseCode("Response Code", resp.ResponseCode)
+				printStringSlice("Subdomains", resp.Subdomains)
+				printString("TrendMicro Category", resp.TrendMicroCategory)
+				printDownloadSamples("Undetected Download Samples", resp.UndetectedDownloadedSamples)
+				printReferrerSamples("Undetected Referrer Samples", resp.UndetectedReferrerSamples)
+				printString("Verbose Message", resp.VerboseMsg)
+				printWOT("Web of Trust Domain Information", resp.WOTDomainInfo)
+				printString("Websense ThreatSeeker Category", resp.WebsenseThreatSeekerCategory)
+				printStringSlice("Whois", strings.Split(resp.Whois, "\n"))
+			}
 		}
 	},
 }
@@ -251,10 +228,55 @@ func printReferrerSamples(title string, referrerSamples []UndetectedReferrerSamp
 	}
 }
 
-func init() {
-	RootCmd.AddCommand(domainReportCmd)
+func retrieveDomainInformation() (responses []*DomainReportResult) {
+	vtURL := "https://www.virustotal.com/vtapi/v2/domain/report"
 
-	domainReportCmd.PersistentFlags().StringVarP(&domain, "domain", "d", "", "Provide the domain which you would like information about.")
-	domainReportCmd.PersistentFlags().BoolVarP(&outputJSON, "output-json", "j", false, "Output JSON instead of human readable.")
-	domainReportCmd.PersistentFlags().BoolVarP(&ouptutHuman, "output-human", "u", false, "Output in human readable format.")
+	client := &http.Client{}
+
+	for _, domain := range domains {
+		req, err := http.NewRequest("GET", vtURL, nil)
+		if err != nil {
+			logrus.WithError(err).Errorln("Failed to generate new request.")
+			continue
+		}
+
+		q := req.URL.Query()
+		q.Add("apikey", apiKey)
+		q.Add("domain", strings.TrimSpace(domain))
+		req.URL.RawQuery = q.Encode()
+
+		resp, err := client.Do(req)
+		if err != nil {
+			logrus.WithError(err).Fatal("Received error while retrieving report.")
+			continue
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logrus.WithError(err).Fatal("Received error while reading response body.")
+			continue
+		}
+
+		var domResp DomainReportResult
+		err = json.Unmarshal(body, &domResp)
+		if err != nil {
+			logrus.WithError(err).Errorln("Failed to parse VirusTotal response")
+			continue
+		}
+
+		domResp.JSON = string(body)
+
+		responses = append(responses, &domResp)
+	}
+
+	return responses
+}
+
+func init() {
+	RootCmd.AddCommand(domainCmd)
+
+	domainCmd.PersistentFlags().StringSliceVarP(&domains, "domain", "d", []string{}, "Provide the domain which you would like information about.")
+	domainCmd.Flags().BoolVarP(&outputJSON, "output-json", "j", false, "Output JSON instead of human readable.")
+	domainCmd.Flags().BoolVarP(&ouptutHuman, "output-human", "u", false, "Output in human readable format.")
 }

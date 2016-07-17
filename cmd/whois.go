@@ -16,37 +16,31 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// subdomainsCmd represents the subdomains command
-var subdomainsCmd = &cobra.Command{
-	Use:   "subdomains",
-	Short: "Print subdomains and domain siblings",
-	Long: `Prints the domain siblings or subdomain of all requested domains.
+// whoisCmd represents the whois command
+var whoisCmd = &cobra.Command{
+	Use:   "whois",
+	Short: "A brief description of your command",
+	Long: `A longer description that spans multiple lines and likely contains examples
+and usage of using your command. For example:
 
-virustotal domain subdomain (-g) -a {{ api_key }} -d {{ domains }}`,
+Cobra is a CLI library for Go that empowers applications.
+This application is a tool to generate the needed files
+to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		responses := retrieveDomainInformation()
 
 		for _, resp := range responses {
+			whoisLines := strings.Split(resp.Whois, "\n")
 			if !grepable {
-				printStringSlice("Domain Siblings", resp.DomainSiblings)
-				printStringSlice("Subdomains", resp.Subdomains)
+				printStringSlice("Whois", whoisLines)
 			} else {
-				for _, domain := range resp.DomainSiblings {
-					if domain == "" {
-						continue
-					}
-					fmt.Println(domain)
-				}
-
-				for _, domain := range resp.Subdomains {
-					if domain == "" {
-						continue
-					}
-					fmt.Println(domain)
+				for _, line := range whoisLines {
+					fmt.Println(line)
 				}
 			}
 		}
@@ -54,7 +48,7 @@ virustotal domain subdomain (-g) -a {{ api_key }} -d {{ domains }}`,
 }
 
 func init() {
-	domainCmd.AddCommand(subdomainsCmd)
+	domainCmd.AddCommand(whoisCmd)
 
-	subdomainsCmd.PersistentFlags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
+	whoisCmd.Flags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
 }

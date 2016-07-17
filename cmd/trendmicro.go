@@ -16,37 +16,37 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// whoisCmd represents the whois command
-var whoisCmd = &cobra.Command{
-	Use:   "whois",
-	Short: "Retrieve whois information",
-	Long: `Retrieve whois information for domains.
+// trendmicroCmd represents the trendmicro command
+var trendmicroCmd = &cobra.Command{
+	Use:   "trendmicro",
+	Short: "Retrieve TrendMicro Category",
+	Long: `Retrieve TrendMicro Category
 
-virustotal domain whois (-g) -a {{ api_key }} -d {{ domains }}
+virustotal domain trendmicro (-g) -a {{ api_key }} -d {{ domains }}
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		responses := retrieveDomainInformation()
 
 		for _, resp := range responses {
-			whoisLines := strings.Split(resp.Whois, "\n")
+			if resp.TrendMicroCategory == "" {
+				continue
+			}
+
 			if !grepable {
-				printStringSlice("Whois", whoisLines)
+				printString("Alexa Domain Info", resp.TrendMicroCategory)
 			} else {
-				for _, line := range whoisLines {
-					fmt.Println(line)
-				}
+				fmt.Println(resp.TrendMicroCategory)
 			}
 		}
 	},
 }
 
 func init() {
-	domainCmd.AddCommand(whoisCmd)
+	domainCmd.AddCommand(trendmicroCmd)
 
-	whoisCmd.Flags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
+	trendmicroCmd.PersistentFlags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
 }

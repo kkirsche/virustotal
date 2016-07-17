@@ -16,37 +16,37 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-// whoisCmd represents the whois command
-var whoisCmd = &cobra.Command{
-	Use:   "whois",
-	Short: "Retrieve whois information",
-	Long: `Retrieve whois information for domains.
+// bitdefenderCmd represents the bitdefender command
+var bitdefenderCmd = &cobra.Command{
+	Use:   "bitdefender",
+	Short: "Retrieve BitDefender Category",
+	Long: `Retrieve BitDefender Category
 
-virustotal domain whois (-g) -a {{ api_key }} -d {{ domains }}
+virustotal domain bitdefender (-g) -a {{ api_key }} -d {{ domains }}
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		responses := retrieveDomainInformation()
 
 		for _, resp := range responses {
-			whoisLines := strings.Split(resp.Whois, "\n")
+			if resp.AlexaDomainInfo == "" {
+				continue
+			}
+
 			if !grepable {
-				printStringSlice("Whois", whoisLines)
+				printString("BitDefender Category", resp.BitDefenderCategory)
 			} else {
-				for _, line := range whoisLines {
-					fmt.Println(line)
-				}
+				fmt.Println(resp.BitDefenderCategory)
 			}
 		}
 	},
 }
 
 func init() {
-	domainCmd.AddCommand(whoisCmd)
+	domainCmd.AddCommand(bitdefenderCmd)
 
-	whoisCmd.Flags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
+	bitdefenderCmd.PersistentFlags().BoolVarP(&grepable, "grep", "g", false, "Make the output grepable")
 }

@@ -242,7 +242,6 @@ func retrieveDomainInformation() (responses []*DomainReportResult) {
 		}
 
 		q := req.URL.Query()
-		q.Add("apikey", apiKey)
 		if apiKey == "" {
 			apiKey = os.Getenv("virustotal_api_key")
 			if apiKey == "" {
@@ -252,6 +251,8 @@ func retrieveDomainInformation() (responses []*DomainReportResult) {
 				apiKey = os.Getenv("Virustotal_Api_Key")
 			}
 		}
+		q.Add("apikey", apiKey)
+
 		q.Add("domain", strings.TrimSpace(domain))
 		req.URL.RawQuery = q.Encode()
 

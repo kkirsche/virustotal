@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/Sirupsen/logrus"
@@ -242,6 +243,15 @@ func retrieveDomainInformation() (responses []*DomainReportResult) {
 
 		q := req.URL.Query()
 		q.Add("apikey", apiKey)
+		if apiKey == "" {
+			apiKey = os.Getenv("virustotal_api_key")
+			if apiKey == "" {
+				apiKey = os.Getenv("VIRUSTOTAL_API_KEY")
+			}
+			if apiKey == "" {
+				apiKey = os.Getenv("Virustotal_Api_Key")
+			}
+		}
 		q.Add("domain", strings.TrimSpace(domain))
 		req.URL.RawQuery = q.Encode()
 

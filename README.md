@@ -33,7 +33,7 @@ Example of `{{ domain }}` is `virustotal.com`
 		virustotal domain bitdefender --grep --api-key "{{ api_key }}" --domain "{{ domain }}"
 		virustotal domain bitdefender -g -a "{{ api_key }}" -a "{{ domain }}"
 
-## Undetected Download Samples
+#### Undetected Download Samples
 
 		virustotal domain samples download --api-key "{{ api_key }}" --domain "{{ domain }}"
 		virustotal domain samples download -a "{{ api_key }}" -a "{{ domain }}"

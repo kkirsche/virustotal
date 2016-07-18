@@ -7,6 +7,8 @@ Golang based virus total command line tool
 
 Example of `{{ domain }}` is `virustotal.com`
 
+The API Key parameter is optional if you use the `virustotal_api_key`, `VIRUSTOTAL_API_KEY`, or `Virustotal_Api_Key` environment variable.
+
 #### Help
 
 		virustotal {{ optional subcommand(s) }} --help
